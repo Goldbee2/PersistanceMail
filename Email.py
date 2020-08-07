@@ -11,8 +11,12 @@ class Email:
     mail.login(__user, __password)
     mail.select('inbox')
 
+    # sets private variable user
+    def set_user(self, user):
+        __user = user
+
     # sets private variable password
-    def set_password(password):
+    def set_password(self, password):
         __password = password
 
     # populates the queue with the n most recent emails
@@ -25,7 +29,9 @@ class Email:
         # gets most recent
         # if not same as email_queue[-1]:
         #   append
-        #   email_queue.pop()
+        #   email_queue.pop() Popular repositories
+
+
 
     # def __get_subject(self, message):
     #     return message.get('subject')
