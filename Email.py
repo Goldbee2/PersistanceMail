@@ -1,8 +1,9 @@
-import email
-import email.header
+from email.header import decode_header, make_header
+from email.parser import HeaderParser
 import imaplib
 from collections import deque
-
+import getpass
+import sys
 
 
 class EmailQueue:
@@ -11,47 +12,53 @@ class EmailQueue:
     __password = 'USER_PASSWORD'
     email_queue = deque() # deque chosen as stack implementation for O(1) runtime on pop
     mail = imaplib.IMAP4_SSL('imap.gmail.com')
-    search_type = 'REVERSE DATE'
+    search_type = '[REVERSE] DATE'
 
     # logs in
     def login(self):
-        print(self.__user)
-        print(self.__password)
-        self.mail.login(self.__user, self.__password)
+        print('logging in as', self.__user)
+        try:
+            self.mail.login(self.__user, self.__password)
+        except: print('invalid credentials.')
+
+    def select_inbox(self):
         self.mail.select('inbox')
 
     # sets private variable user
-    def set_user(self, user):
+    def set_username_and_password(self):
+        user = input("please enter your username:")
         self.__user = user
-
-    # sets private variable password
-    def set_password(self, password):
+        password = input("please enter your password:")
         self.__password = password
 
+        # populates the queue with the n most recent emails
+    def initialize_queue(self, queue_length):
+        emails = self.get_emails(self, queue_length)
+        for message in emails:
+            self.email_queue.append(message)
+
     def get_emails(self, count):
-            typ, data = self.search(None, self.search_type)
-            for i in data[0].split():
-                typ, data = self.mail.fetch(i, '(BODY[HEADER])')
-                message = email.message_from_string(data[0][1])
-                decode = email.header.decode_header(message['Subject'])[0]
-                subject = unicode(decode[0])
-                print(subject)
+        emails = []
+        for item in self.latest_n_emails(self, count):
+            data = self.mail.fetch(item, '(BODY[HEADER])')
+            header_data = data[1][0][1]
+            header_data = header_data.decode("utf-8")
+            parser = HeaderParser()
+            message = parser.parsestr(header_data)
+            decoded_header = make_header(decode_header(message['subject']))
+            emails.append(str(decoded_header))
+        return emails
+
+        # gets latest n emails from the mailbox =
+    def latest_n_emails(self, count):
+        typ, data = self.mail.search(None, 'ALL')
+        message_list = data[0].split()
+        emails = message_list[-1 * count:]
+        return emails
 
 
-
-
-    # populates the queue with the n most recent emails
-    def initialize_queue(self, email_queue, email_count, imap):
-        pass
-        # gets last n emails and fills queue.
-        # self.email_queue.append()
 
     def update_queue(self, email_queue, imap):
-        pass
-        # gets most recent
-        # if not same as email_queue[-1]:
-        #   append
-        #   email_queue.pop()
-
-    def __get_subject(self, message):
-         return message.get('subject')
+        most_recent_email = self.get_emails(1)
+        if most_recent_email != email_queue[-1]:
+            email_queue.append(most_recent_email)
